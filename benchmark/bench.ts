@@ -1,19 +1,21 @@
 import { Bench } from 'tinybench'
 
-import { plus100 } from '../index.js'
+import { fibonacci } from '../index.js'
 
-function add(a: number) {
-  return a + 100
+function fib(n: number): number {
+  return n <= 1 ? n : fib(n - 1) + fib(n - 2);
 }
 
-const b = new Bench()
+const b = new Bench();
 
-b.add('Native a + 100', () => {
-  plus100(10)
+const N = 40;
+
+b.add(`Native fibonacci for ${N}`, () => {
+  fibonacci(N)
 })
 
-b.add('JavaScript a + 100', () => {
-  add(10)
+b.add(`JavaScript fibonacci for ${N}`, () => {
+  fib(N)
 })
 
 await b.run()
