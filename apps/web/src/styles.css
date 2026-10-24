@@ -1,0 +1,185 @@
+:root {
+  --bg0: #0f1419;
+  --bg1: #1a222c;
+  --bg2: #243040;
+  --ink: #e8eef4;
+  --muted: #9aabbc;
+  --accent: #3db8a0;
+  --accent-2: #e8a04a;
+  --danger: #d96a6a;
+  --line: rgba(232, 238, 244, 0.12);
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-display: 'IBM Plex Serif', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #1d3a3a 0%, transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, #3a2c1d 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg0), #121820 40%, var(--bg0));
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 2.5rem;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.25rem;
+}
+
+.tagline {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  max-width: 42rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: color-mix(in srgb, var(--bg1) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  backdrop-filter: blur(6px);
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 0.65rem;
+}
+
+.field label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+button.btn {
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+
+button.btn.primary {
+  background: color-mix(in srgb, var(--accent) 35%, var(--bg2));
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+button.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
+
+.viz-wrap {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.viz-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+canvas.field-canvas {
+  width: 100%;
+  height: auto;
+  background: #0a0e13;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.matrix-grid {
+  display: grid;
+  gap: 2px;
+  margin-top: 0.5rem;
+}
+
+.matrix-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.matrix-cell[data-id='0'] {
+  background: #2a3544;
+}
+.matrix-cell[data-id='1'] {
+  background: #3db8a0;
+}
+.matrix-cell[data-id='2'] {
+  background: #e8a04a;
+}

@@ -1,20 +1,11 @@
-[package]
-authors = ["LongYinan <lynweklm@gmail.com>"]
+[workspace]
+resolver = "2"
+members = ["crates/fdtd-core", "packages/fdtd-native"]
+
+[workspace.package]
 edition = "2021"
-name    = "napi-package-template"
+license = "MIT"
 version = "0.1.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-napi        = "2"
-napi-derive = "2"
-
-[build-dependencies]
-napi-build = "2"
 
 [profile.release]
 lto = true

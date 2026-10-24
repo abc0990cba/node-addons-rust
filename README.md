@@ -1,105 +1,57 @@
-# `@napi-rs/package-template`
+# FDTD Online
 
-![https://github.com/napi-rs/package-template/actions](https://github.com/napi-rs/package-template/workflows/CI/badge.svg)
+Nanophotonics with FDTD — monorepo with a reusable Rust physics core, NAPI adapter, Node WebSocket server, and Vite React client.
 
-> Template project for writing node packages with napi-rs.
-
-# Usage
-
-1. Click **Use this template**.
-2. **Clone** your project.
-3. Run `yarn install` to install dependencies.
-4. Run `npx napi rename -n [name]` command under the project folder to rename your package.
-
-## Install this test package
+## Layout
 
 ```
-yarn add @napi-rs/package-template
+apps/web                 Vite + React 19 UI
+apps/server              Express + ws (per-connection sessions)
+crates/fdtd-core         Pure Rust FDTD (wasm-ready API)
+packages/fdtd-native     napi-rs adapter
+packages/fdtd-protocol   Shared WS types + zod
+legacy/                  MATLAB, dumps, old theory (not runtime)
+docs/                    physics, architecture, testing, wasm-roadmap, migration
 ```
 
-## Support matrix
+## Prerequisites
 
-### Operating Systems
+- Node.js ≥ 22
+- pnpm 9
+- Rust stable (edition 2021; tested with 1.83+)
 
-|                  | node14 | node16 | node18 |
-| ---------------- | ------ | ------ | ------ |
-| Windows x64      | ✓      | ✓      | ✓      |
-| Windows x32      | ✓      | ✓      | ✓      |
-| Windows arm64    | ✓      | ✓      | ✓      |
-| macOS x64        | ✓      | ✓      | ✓      |
-| macOS arm64      | ✓      | ✓      | ✓      |
-| Linux x64 gnu    | ✓      | ✓      | ✓      |
-| Linux x64 musl   | ✓      | ✓      | ✓      |
-| Linux arm gnu    | ✓      | ✓      | ✓      |
-| Linux arm64 gnu  | ✓      | ✓      | ✓      |
-| Linux arm64 musl | ✓      | ✓      | ✓      |
-| Android arm64    | ✓      | ✓      | ✓      |
-| Android armv7    | ✓      | ✓      | ✓      |
-| FreeBSD x64      | ✓      | ✓      | ✓      |
-
-## Ability
-
-### Build
-
-After `yarn build/npm run build` command, you can see `package-template.[darwin|win32|linux].node` file in project root. This is the native addon built from [lib.rs](./src/lib.rs).
-
-### Test
-
-With [ava](https://github.com/avajs/ava), run `yarn test/npm run test` to testing native addon. You can also switch to another testing framework if you want.
-
-### CI
-
-With GitHub Actions, each commit and pull request will be built and tested automatically in [`node@14`, `node@16`, `@node18`] x [`macOS`, `Linux`, `Windows`] matrix. You will never be afraid of the native addon broken in these platforms.
-
-### Release
-
-Release native package is very difficult in old days. Native packages may ask developers who use it to install `build toolchain` like `gcc/llvm`, `node-gyp` or something more.
-
-With `GitHub actions`, we can easily prebuild a `binary` for major platforms. And with `N-API`, we should never be afraid of **ABI Compatible**.
-
-The other problem is how to deliver prebuild `binary` to users. Downloading it in `postinstall` script is a common way that most packages do it right now. The problem with this solution is it introduced many other packages to download binary that has not been used by `runtime codes`. The other problem is some users may not easily download the binary from `GitHub/CDN` if they are behind a private network (But in most cases, they have a private NPM mirror).
-
-In this package, we choose a better way to solve this problem. We release different `npm packages` for different platforms. And add it to `optionalDependencies` before releasing the `Major` package to npm.
-
-`NPM` will choose which native package should download from `registry` automatically. You can see [npm](./npm) dir for details. And you can also run `yarn add @napi-rs/package-template` to see how it works.
-
-## Develop requirements
-
-- Install the latest `Rust`
-- Install `Node.js@10+` which fully supported `Node-API`
-- Install `yarn@1.x`
-
-## Test in local
-
-- yarn
-- yarn build
-- yarn test
-
-And you will see:
+## Setup
 
 ```bash
-$ ava --verbose
-
-  ✔ sync function from native code
-  ✔ sleep function from native code (201ms)
-  ─
-
-  2 tests passed
-✨  Done in 1.12s.
+pnpm install
+pnpm --filter @fdtd-online/native run build
+pnpm --filter @fdtd-online/protocol run build
 ```
 
-## Release package
+## Run
 
-Ensure you have set your **NPM_TOKEN** in the `GitHub` project setting.
+```bash
+# terminal 1
+pnpm --filter @fdtd-online/server run dev
 
-In `Settings -> Secrets`, add **NPM_TOKEN** into it.
-
-When you want to release the package:
-
-```
-npm version [<newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease [--preid=<prerelease-id>] | from-git]
-
-git push
+# terminal 2
+pnpm --filter @fdtd-online/web run dev
 ```
 
-GitHub actions will do the rest job for you.
+- UI: http://localhost:5173  
+- API docs: http://localhost:5001/docs  
+- Health: http://localhost:5001/health  
+
+## Test physics
+
+```bash
+cargo test -p fdtd-core
+```
+
+## Docs
+
+- [physics.md](docs/physics.md)
+- [architecture.md](docs/architecture.md)
+- [testing.md](docs/testing.md)
+- [wasm-roadmap.md](docs/wasm-roadmap.md)
+- [migration.md](docs/migration.md)

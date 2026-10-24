@@ -1,0 +1,18 @@
+[package]
+name = "fdtd-native"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "napi-rs thin adapter over fdtd-core"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+fdtd-core = { path = "../../crates/fdtd-core" }
+napi = { version = "2", default-features = false, features = ["napi6"] }
+napi-derive = "2"
+
+[build-dependencies]
+# Pin for Rust 1.83 toolchains (2.6+ needs newer rustc).
+napi-build = "=2.1.3"
