@@ -30,15 +30,24 @@ fn materials_from_js(
     if ny <= 1 {
         MaterialGrid::from_vector_1d(&material_vector, catalog, nx)
     } else {
-        let side = (material_vector.len() as f64).sqrt().round() as usize;
-        let side = side.max(1);
-        let mut matrix = Vec::with_capacity(side);
-        for r in 0..side {
-            let mut row = Vec::with_capacity(side);
-            for c in 0..side {
+        // Prefer square reshape; if length is not square, treat as row-major ny×nx coarse grid.
+        let len = material_vector.len().max(1);
+        let side = (len as f64).sqrt().round() as usize;
+        let (src_ny, src_nx) = if side * side == len {
+            (side.max(1), side.max(1))
+        } else {
+            // fall back: single-row stretch or best-effort height
+            let h = ((len as f64) / (nx as f64)).round().max(1.0) as usize;
+            let w = (len / h).max(1);
+            (h, w)
+        };
+        let mut matrix = Vec::with_capacity(src_ny);
+        for r in 0..src_ny {
+            let mut row = Vec::with_capacity(src_nx);
+            for c in 0..src_nx {
                 row.push(
                     material_vector
-                        .get(r * side + c)
+                        .get(r * src_nx + c)
                         .copied()
                         .unwrap_or(0),
                 );

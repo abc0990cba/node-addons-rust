@@ -316,3 +316,55 @@ fn speed_of_light_constant_consistent() {
     assert!((C0_SI - 299_792_458.0).abs() < 1.0);
     assert!((C0_NM_FS - 299.792_458).abs() < 1e-6);
 }
+
+#[test]
+fn lab_1d_barrier_reflects_vs_vacuum() {
+    // Mirrors the UI "1D dielectric barrier" experiment geometry.
+    // Time-gate a left-side probe after the forward pulse has passed.
+    let n = 200usize;
+    let run = |with_barrier: bool| {
+        let catalog = vec![
+            MaterialSample::VACUUM,
+            MaterialSample::new(2.3, 1.0, 0.0),
+        ];
+        let mut ids = vec![0u32; n];
+        if with_barrier {
+            for i in (n / 2)..((n * 3) / 4) {
+                ids[i] = 1;
+            }
+        }
+        let mut cfg = Solver1DConfig::default();
+        cfg.grid_size = n;
+        cfg.pml_width = 20;
+        cfg.materials = MaterialGrid {
+            nx: n,
+            ny: 1,
+            ids,
+            catalog,
+        };
+        cfg.source.position_rel = [0.15, 0.0];
+        cfg.source.tau = 4.0;
+        cfg.source.t0 = 12.0;
+        cfg.source.omega = 0.0;
+        cfg.source.kind = SourceKind::SoftGaussianCosine;
+        let mut s = Solver1D::new(cfg);
+        let probe = n / 2 - 15;
+        let mut late_left = 0.0_f64;
+        for step in 0..400 {
+            s.step();
+            if step > 220 {
+                late_left = late_left.max(s.ex[probe].abs());
+            }
+        }
+        assert!(s.ex.iter().all(|v| v.is_finite()));
+        late_left
+    };
+    let left_vac = run(false);
+    let left_bar = run(true);
+    assert!(left_vac.is_finite() && left_bar.is_finite());
+    // After the forward pulse has left, barrier leaves a stronger returning wave.
+    assert!(
+        left_bar > left_vac * 1.15,
+        "barrier should leave stronger late left field: bar={left_bar} vac={left_vac}"
+    );
+}

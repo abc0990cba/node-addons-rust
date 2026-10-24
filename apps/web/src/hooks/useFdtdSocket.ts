@@ -35,7 +35,7 @@ function frameFromBinary(buf: ArrayBuffer): FramePayload {
       kind: '1d',
       dataX: d.dataX,
       dataY: d.dataY,
-      dataHy: d.dataY,
+      dataEx: d.dataY,
       step: d.step,
       col: d.col,
       row: 1,
