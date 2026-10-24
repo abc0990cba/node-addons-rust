@@ -178,8 +178,44 @@ canvas.field-canvas {
   background: #2a3544;
 }
 .matrix-cell[data-id='1'] {
-  background: #3db8a0;
+  background: #e07060;
 }
 .matrix-cell[data-id='2'] {
-  background: #e8a04a;
+  background: #3a6db0;
+}
+
+.material-edit {
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+}
+
+.field-row label {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.field-row input {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 0.3rem 0.4rem;
+  width: 100%;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  vertical-align: middle;
 }

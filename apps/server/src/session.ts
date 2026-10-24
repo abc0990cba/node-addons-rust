@@ -20,8 +20,8 @@ export class SimSession {
   private solver: Solver | null = null
   private lastConfig: ControlMessage | null = null
   private frameFormat: FrameFormat = 'binary'
-  private readonly intervalMs = 80
-  private readonly stepsPerTick = 2
+  private readonly intervalMs = 60
+  private readonly stepsPerTick = 4
 
   constructor(private readonly send: SendFn) {}
 
@@ -91,7 +91,11 @@ export class SimSession {
   private createSolver(type: SimType, msg: ControlMessage): Solver {
     const materials = msg.materials ?? [{ id: 0, eps: 1, mu: 1, sigma: 0 }]
     const matrix = msg.materialMatrix ?? [[0]]
-    const flat = matrix.flat()
+    // 1D: use the first row only so barrier/slab geometry survives flattening.
+    const flat =
+      type === '1D'
+        ? (matrix[0] ?? matrix.flat()).map((v) => Number(v))
+        : matrix.flat().map((v) => Number(v))
     const eps = materials.map((m) => m.eps)
     const mu = materials.map((m) => m.mu)
     const sigma = materials.map((m) => m.sigma)
@@ -216,6 +220,7 @@ export class SimSession {
       for (let i = 0; i < this.stepsPerTick; i++) {
         if (this.solver.kind === '1D') {
           const d = this.solver.sim.getNextTimeLayer()
+          // Primary channel Ex (soft source injects into Ex) — clearer lab demos.
           last = {
             kind: '1d',
             step: d.currentTick,
@@ -223,7 +228,7 @@ export class SimSession {
             cols: d.col,
             min: d.minEx,
             max: d.maxEx,
-            values: d.dataHy,
+            values: d.dataEx,
             jsonExtra: { dataEx: d.dataEx, dataHy: d.dataHy },
           }
         } else if (this.solver.kind === '2D') {
@@ -240,14 +245,18 @@ export class SimSession {
           }
         } else {
           const d = this.solver.sim.getNextTimeLayer()
+          // Prefer Hz for TE plane-wave visibility; keep Ez alongside.
+          const useHz =
+            Math.abs(d.maxHz) + Math.abs(d.minHz) >=
+            Math.abs(d.max) + Math.abs(d.min)
           last = {
             kind: '2d',
             step: d.timeStep,
             rows: d.rows,
             cols: d.cols,
-            min: d.min,
-            max: d.max,
-            values: d.ez,
+            min: useHz ? d.minHz : d.min,
+            max: useHz ? d.maxHz : d.max,
+            values: useHz ? d.hz : d.ez,
             jsonExtra: { hz: d.hz, ez: d.ez },
           }
         }

@@ -1,30 +1,59 @@
 import { useMemo, useState } from 'react'
-import type { Material, SimType } from '@fdtd-online/protocol'
-import { defaultMatrix, MatrixEditor } from './components/MatrixEditor'
+import { MatrixEditor } from './components/MatrixEditor'
 import { FieldViz } from './components/FieldViz'
 import { useFdtdSocket } from './hooks/useFdtdSocket'
-
-const MATERIALS: Material[] = [
-  { id: 0, eps: 1, mu: 1, sigma: 0 },
-  { id: 1, eps: 4, mu: 1, sigma: 0 },
-  { id: 2, eps: 3, mu: 1, sigma: 1e6 },
-]
+import { upsampleEps1d } from './lib/detector'
+import {
+  EXPERIMENTS,
+  experimentById,
+  type ExperimentId,
+} from './lib/experiments'
+import { DEFAULT_MATERIALS, toWireMaterials, type UiMaterial } from './lib/materials'
 
 export function App() {
   const { status, frame, lastError, start, pause, continue: cont, stop } =
     useFdtdSocket()
-  const [simType, setSimType] = useState<SimType>('1D')
-  const [omega, setOmega] = useState(1.0)
-  const [tau, setTau] = useState(8)
-  const [lambda, setLambda] = useState(50)
-  const [beamsize, setBeamsize] = useState(20)
-  const [srcX, setSrcX] = useState(0.3)
-  const [srcY, setSrcY] = useState(0.5)
-  const [srcType, setSrcType] = useState(1)
-  const [dataToReturn, setDataToReturn] = useState(0)
-  const [matrixSize] = useState(16)
-  const [matrix, setMatrix] = useState(() => defaultMatrix(16))
+
+  const [experimentId, setExperimentId] = useState<ExperimentId>('1d-barrier')
+  const experiment = experimentById(experimentId)
+
+  const [materials, setMaterials] = useState<UiMaterial[]>(() =>
+    DEFAULT_MATERIALS.map((m) => ({ ...m })),
+  )
+  const [matrix, setMatrix] = useState(() =>
+    experiment.buildMatrix(experiment.gridSize, DEFAULT_MATERIALS),
+  )
   const [activeMaterial, setActiveMaterial] = useState(1)
+  const [srcX, setSrcX] = useState(experiment.src.x)
+  const [srcY, setSrcY] = useState(experiment.src.y)
+  const [omega, setOmega] = useState(experiment.omega ?? 1)
+  const [tau, setTau] = useState(experiment.tau ?? 8)
+  const [lambda, setLambda] = useState(experiment.lambda ?? 50)
+  const [beamsize, setBeamsize] = useState(experiment.beamsize ?? 20)
+  const [srcType, setSrcType] = useState(experiment.srcType ?? 1)
+  const [dataToReturn, setDataToReturn] = useState(experiment.dataToReturn ?? 0)
+  const [detectorCoord, setDetectorCoord] = useState(0.7)
+  const [detectorDir, setDetectorDir] = useState<'vertical' | 'horizontal'>(
+    'vertical',
+  )
+
+  const applyExperiment = (id: ExperimentId) => {
+    const e = experimentById(id)
+    setExperimentId(id)
+    setMatrix(e.buildMatrix(e.gridSize, materials))
+    setSrcX(e.src.x)
+    setSrcY(e.src.y)
+    if (e.omega != null) setOmega(e.omega)
+    if (e.tau != null) setTau(e.tau)
+    if (e.lambda != null) setLambda(e.lambda)
+    if (e.beamsize != null) setBeamsize(e.beamsize)
+    if (e.srcType != null) setSrcType(e.srcType)
+    if (e.dataToReturn != null) setDataToReturn(e.dataToReturn)
+  }
+
+  const simType = experiment.simType
+  const matrixRows = matrix.length
+  const matrixCols = matrix[0]?.length ?? 0
 
   const condition = useMemo(
     (): [number, number] =>
@@ -32,40 +61,70 @@ export function App() {
     [simType, omega, tau, lambda, beamsize],
   )
 
+  const materialColors = useMemo(() => {
+    const m: Record<number, string> = {}
+    for (const mat of materials) m[mat.id] = mat.color
+    return m
+  }, [materials])
+
+  const epsOverlay = useMemo(() => {
+    if (simType !== '1D' || !frame?.col) return undefined
+    const row = matrix[0] ?? []
+    return upsampleEps1d(row, materials, frame.col)
+  }, [simType, frame?.col, matrix, materials])
+
   const onStart = () => {
+    // 1D: send a single row so the native upsampler maps barrier correctly.
+    const materialMatrix =
+      simType === '1D' ? [matrix[0] ?? Array(matrixCols).fill(0)] : matrix
+
     start({
       type: simType,
       condition,
-      materialMatrix: matrix,
-      materials: MATERIALS,
+      materialMatrix,
+      materials: toWireMaterials(materials),
       srcPositionRelative: [{ x: srcX, y: srcY }],
       srcType,
       dataToReturn,
     })
   }
 
+  const updateMaterial = (
+    id: number,
+    patch: Partial<Pick<UiMaterial, 'eps' | 'mu' | 'sigma'>>,
+  ) => {
+    setMaterials((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    )
+  }
+
   return (
     <div className="app-shell">
       <h1 className="brand">Nanophotonics with FDTD</h1>
       <p className="tagline">
-        Live 1D / 2D / TF–SF electromagnetic simulation — Rust physics core over
-        WebSocket.
+        Lab experiments: 1D pulse / barrier, 2D waveguide & diffraction, TF/SF
+        plane wave — Rust physics over WebSocket.
       </p>
 
       <div className="layout">
         <aside className="panel">
-          <h2>Setup</h2>
+          <h2>Experiment</h2>
           <div className="field">
-            <label>Simulation</label>
+            <label>Demo preset</label>
             <select
-              value={simType}
-              onChange={(e) => setSimType(e.target.value as SimType)}
+              value={experimentId}
+              onChange={(e) => applyExperiment(e.target.value as ExperimentId)}
             >
-              <option value="1D">1D PML</option>
-              <option value="2D">2D TE_z PML</option>
-              <option value="2D_TFSF">2D UPML + TF/SF</option>
+              {EXPERIMENTS.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.label}
+                </option>
+              ))}
             </select>
           </div>
+          <p className="status" style={{ marginBottom: '0.75rem' }}>
+            {experiment.blurb}
+          </p>
 
           {simType === '1D' ? (
             <>
@@ -90,42 +149,69 @@ export function App() {
             </>
           ) : (
             <>
+              {simType === '2D' && (
+                <>
+                  <div className="field">
+                    <label>λ (UI scale)</label>
+                    <input
+                      type="number"
+                      value={lambda}
+                      onChange={(e) => setLambda(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Beam size</label>
+                    <input
+                      type="number"
+                      value={beamsize}
+                      onChange={(e) => setBeamsize(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Source type</label>
+                    <select
+                      value={srcType}
+                      onChange={(e) => setSrcType(Number(e.target.value))}
+                    >
+                      <option value={1}>Soft sinusoid</option>
+                      <option value={2}>Hard Gaussian×sin</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Field channel</label>
+                    <select
+                      value={dataToReturn}
+                      onChange={(e) => setDataToReturn(Number(e.target.value))}
+                    >
+                      <option value={0}>Hz</option>
+                      <option value={1}>Ex</option>
+                      <option value={2}>Ey</option>
+                      <option value={3}>Energy</option>
+                    </select>
+                  </div>
+                </>
+              )}
               <div className="field">
-                <label>λ (UI scale)</label>
+                <label>Detector position</label>
                 <input
                   type="number"
-                  value={lambda}
-                  onChange={(e) => setLambda(Number(e.target.value))}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={detectorCoord}
+                  onChange={(e) => setDetectorCoord(Number(e.target.value))}
                 />
               </div>
               <div className="field">
-                <label>Beam size</label>
-                <input
-                  type="number"
-                  value={beamsize}
-                  onChange={(e) => setBeamsize(Number(e.target.value))}
-                />
-              </div>
-              <div className="field">
-                <label>Source type</label>
+                <label>Detector direction</label>
                 <select
-                  value={srcType}
-                  onChange={(e) => setSrcType(Number(e.target.value))}
+                  value={detectorDir}
+                  onChange={(e) =>
+                    setDetectorDir(e.target.value as 'vertical' | 'horizontal')
+                  }
                 >
-                  <option value={1}>Soft sinusoid</option>
-                  <option value={2}>Hard Gaussian×sin</option>
-                </select>
-              </div>
-              <div className="field">
-                <label>Field channel</label>
-                <select
-                  value={dataToReturn}
-                  onChange={(e) => setDataToReturn(Number(e.target.value))}
-                >
-                  <option value={0}>Hz</option>
-                  <option value={1}>Ex</option>
-                  <option value={2}>Ey</option>
-                  <option value={3}>Energy</option>
+                  <option value="vertical">Vertical</option>
+                  <option value="horizontal">Horizontal</option>
                 </select>
               </div>
             </>
@@ -157,10 +243,60 @@ export function App() {
           )}
 
           <h2>Materials</h2>
+          {materials.map((m) => (
+            <div key={m.id} className="material-edit">
+              <div className="status">
+                <span
+                  className="swatch"
+                  style={{ background: m.color }}
+                />{' '}
+                {m.name}
+              </div>
+              <div className="field-row">
+                <label>
+                  ε
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={m.eps}
+                    onChange={(e) =>
+                      updateMaterial(m.id, { eps: Number(e.target.value) })
+                    }
+                  />
+                </label>
+                <label>
+                  μ
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={m.mu}
+                    onChange={(e) =>
+                      updateMaterial(m.id, { mu: Number(e.target.value) })
+                    }
+                  />
+                </label>
+                <label>
+                  σ
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={m.sigma}
+                    onChange={(e) =>
+                      updateMaterial(m.id, { sigma: Number(e.target.value) })
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+          ))}
+
+          <h2>Geometry</h2>
           <MatrixEditor
-            size={matrixSize}
+            rows={matrixRows}
+            cols={matrixCols}
             matrix={matrix}
             activeMaterial={activeMaterial}
+            materialColors={materialColors}
             onChange={setMatrix}
             onActiveMaterial={setActiveMaterial}
           />
@@ -187,7 +323,17 @@ export function App() {
 
         <main className="panel">
           <h2>Field</h2>
-          <FieldViz mode={simType} frame={frame} />
+          <FieldViz
+            mode={simType}
+            frame={frame}
+            epsOverlay={epsOverlay}
+            srcRelX={srcX}
+            detector={
+              simType === '1D'
+                ? undefined
+                : { relativeCoord: detectorCoord, direction: detectorDir }
+            }
+          />
         </main>
       </div>
     </div>

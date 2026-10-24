@@ -1,26 +1,36 @@
 type Props = {
-  size: number
+  /** For 1D experiments matrix is 1×N; for 2D it is N×N. */
+  rows: number
+  cols: number
   matrix: number[][]
   activeMaterial: number
+  materialColors: Record<number, string>
   onChange: (m: number[][]) => void
   onActiveMaterial: (id: number) => void
 }
 
 export function MatrixEditor({
-  size,
+  rows,
+  cols,
   matrix,
   activeMaterial,
+  materialColors,
   onChange,
   onActiveMaterial,
 }: Props) {
   const paint = (r: number, c: number) => {
     const next = matrix.map((row) => row.slice())
+    if (!next[r]) return
     next[r][c] = activeMaterial
     onChange(next)
   }
 
   const fill = (id: number) => {
-    onChange(Array.from({ length: size }, () => Array.from({ length: size }, () => id)))
+    onChange(
+      Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => id),
+      ),
+    )
   }
 
   return (
@@ -31,31 +41,22 @@ export function MatrixEditor({
           value={activeMaterial}
           onChange={(e) => onActiveMaterial(Number(e.target.value))}
         >
-          <option value={0}>0 — vacuum</option>
+          <option value={0}>0 — free space</option>
           <option value={1}>1 — dielectric</option>
-          <option value={2}>2 — metal-like</option>
+          <option value={2}>2 — lossy / metal-like</option>
         </select>
       </div>
       <div className="btn-row">
         <button type="button" className="btn" onClick={() => fill(0)}>
           Clear
         </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => {
-            const next = matrix.map((row) => row.slice())
-            const mid = Math.floor(size / 2)
-            for (let r = 0; r < size; r++) next[r][mid] = 1
-            onChange(next)
-          }}
-        >
-          Slab
-        </button>
       </div>
       <div
         className="matrix-grid"
-        style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
+        style={{
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          maxHeight: rows === 1 ? 48 : undefined,
+        }}
       >
         {matrix.map((row, r) =>
           row.map((id, c) => (
@@ -64,6 +65,10 @@ export function MatrixEditor({
               type="button"
               className="matrix-cell"
               data-id={id}
+              style={{
+                background: materialColors[id] ?? undefined,
+                minHeight: rows === 1 ? 28 : undefined,
+              }}
               aria-label={`cell ${r},${c}`}
               onMouseDown={() => paint(r, c)}
               onMouseEnter={(e) => {
@@ -77,6 +82,8 @@ export function MatrixEditor({
   )
 }
 
-export function defaultMatrix(size: number): number[][] {
-  return Array.from({ length: size }, () => Array.from({ length: size }, () => 0))
+export function defaultMatrix(rows: number, cols: number): number[][] {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => 0),
+  )
 }

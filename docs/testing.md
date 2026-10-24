@@ -34,10 +34,14 @@ pnpm --filter @fdtd-online/protocol run build
 pnpm --filter @fdtd-online/protocol run test
 ```
 
-## Manual E2E
+## Manual E2E / lab demos
 
 1. `pnpm --filter @fdtd-online/server run dev`
 2. `pnpm --filter @fdtd-online/web run dev`
-3. Open the Vite URL → Start 1D / 2D / 2D_TFSF → Pause / Continue / Stop.
-4. Compare qualitative look to `legacy/dumps/screenshots/`.
-5. Confirm WS payloads are binary by default (`frameFormat: "json"` for JSON fallback).
+3. Open the Vite URL. Exercise each **Experiment** preset:
+   - 1D free space / dielectric barrier (ε overlay on plot)
+   - 2D point source / waveguide / diffraction / interface + line detector
+   - 2D TF/SF plane wave
+4. Pause / Continue / Stop; edit ε/μ/σ and re-Start.
+5. Compare qualitative look to `legacy/dumps/screenshots/`.
+6. Confirm WS payloads are binary by default (`frameFormat: "json"` for JSON fallback).
