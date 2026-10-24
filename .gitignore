@@ -117,7 +117,6 @@ dist
 #Added by cargo
 
 /target
-Cargo.lock
 
 *.node
 .pnp.*
@@ -127,3 +126,10 @@ Cargo.lock
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+# Rust / native
+/target
+**/*.node
+packages/fdtd-native/*.node
+apps/*/dist
+packages/*/dist
+.DS_Store

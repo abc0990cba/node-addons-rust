@@ -1,0 +1,17 @@
+[package]
+name = "fdtd-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure Rust FDTD physics kernel (NAPI / WASM adapters stay outside)"
+readme = "README.md"
+
+[features]
+default = ["std"]
+std = []
+# Reserved for wasm-bindgen consumers; keeps API free of host glue.
+wasm = []
+
+[dependencies]
+
+[dev-dependencies]

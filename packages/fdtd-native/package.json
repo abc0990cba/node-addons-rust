@@ -1,0 +1,30 @@
+{
+  "name": "@fdtd-online/native",
+  "version": "0.1.0",
+  "description": "NAPI adapter for fdtd-core",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "fdtd-native",
+    "triples": {
+      "defaults": true
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "test": "node --test test/smoke.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4",
+    "typescript": "^5.7.0"
+  }
+}
