@@ -6,6 +6,9 @@ export type SimType = z.infer<typeof SimTypeSchema>
 export const WsEventSchema = z.enum(['start', 'pause', 'continue', 'close'])
 export type WsEvent = z.infer<typeof WsEventSchema>
 
+export const FrameFormatSchema = z.enum(['binary', 'json'])
+export type FrameFormat = z.infer<typeof FrameFormatSchema>
+
 export const MaterialSchema = z.object({
   id: z.number().int().nonnegative(),
   eps: z.number().positive(),
@@ -27,6 +30,8 @@ export const ControlMessageSchema = z.object({
     .array(z.object({ x: z.number(), y: z.number() }))
     .optional(),
   srcType: z.number().int().optional(),
+  /** Default `binary`. Use `json` for /docs debugging. */
+  frameFormat: FrameFormatSchema.optional(),
 })
 export type ControlMessage = z.infer<typeof ControlMessageSchema>
 
@@ -38,7 +43,7 @@ export type StepAck = z.infer<typeof StepAckSchema>
 export const ClientMessageSchema = z.union([ControlMessageSchema, StepAckSchema])
 export type ClientMessage = z.infer<typeof ClientMessageSchema>
 
-/** JSON frame (v1 parity). Binary Float64 frames are optional later. */
+/** JSON frame (fallback / debugging). */
 export const Frame1DSchema = z.object({
   kind: z.literal('1d').optional(),
   dataX: z.array(z.number()),
@@ -60,7 +65,6 @@ export const Frame2DSchema = z.object({
   col: z.number().int(),
   max: z.number(),
   min: z.number(),
-  /** Correct field names when available. */
   hz: z.array(z.number()).optional(),
   ex: z.array(z.number()).optional(),
   ey: z.array(z.number()).optional(),
@@ -69,5 +73,14 @@ export type Frame2D = z.infer<typeof Frame2DSchema>
 
 export type SimFrame = Frame1D | Frame2D
 
-export const BINARY_FRAME_MAGIC = 0x46445444 // 'FDTD'
-export const BINARY_FRAME_VERSION = 1
+export {
+  BINARY_FRAME_MAGIC,
+  BINARY_FRAME_VERSION,
+  BinaryKind,
+  decodeBinaryFrame,
+  encodeBinaryFrame,
+  isBinaryFrame,
+  type BinaryKindCode,
+  type DecodedBinaryFrame,
+  type EncodeBinaryInput,
+} from './binary.js'

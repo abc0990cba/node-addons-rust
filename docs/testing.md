@@ -27,9 +27,17 @@ pnpm --filter @fdtd-online/native run build
 pnpm --filter @fdtd-online/native run test
 ```
 
+## Protocol binary frames
+
+```bash
+pnpm --filter @fdtd-online/protocol run build
+pnpm --filter @fdtd-online/protocol run test
+```
+
 ## Manual E2E
 
 1. `pnpm --filter @fdtd-online/server run dev`
 2. `pnpm --filter @fdtd-online/web run dev`
 3. Open the Vite URL → Start 1D / 2D / 2D_TFSF → Pause / Continue / Stop.
 4. Compare qualitative look to `legacy/dumps/screenshots/`.
+5. Confirm WS payloads are binary by default (`frameFormat: "json"` for JSON fallback).

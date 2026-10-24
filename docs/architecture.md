@@ -28,3 +28,9 @@ apps/web  --WS/JSON-->  apps/server  -->  packages/fdtd-native (NAPI)
 ## Field naming
 
 Protocol and NAPI use `hz` / `ex` / `ey` (and `ez` for TFSF). Legacy `dataEz` holding Hz is not reproduced.
+
+## WebSocket frames
+
+- **Default:** binary Float64 (`encodeBinaryFrame` / `decodeBinaryFrame` in `@fdtd-online/protocol`).
+- **Fallback:** JSON when `frameFormat: "json"` on `start` (handy for `/docs` debugging).
+- Control / ack messages stay JSON.

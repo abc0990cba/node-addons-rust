@@ -1,11 +1,13 @@
 import {
   ClientMessageSchema,
+  encodeBinaryFrame,
   type ControlMessage,
+  type FrameFormat,
   type SimType,
 } from '@fdtd-online/protocol'
 import { Fdtd1D, Fdtd2D, Fdtd2DTFSF } from '@fdtd-online/native'
 
-type SendFn = (data: string) => void
+type SendFn = (data: string | Buffer | ArrayBuffer) => void
 
 type Solver =
   | { kind: '1D'; sim: InstanceType<typeof Fdtd1D> }
@@ -17,6 +19,7 @@ export class SimSession {
   private interval: ReturnType<typeof setInterval> | null = null
   private solver: Solver | null = null
   private lastConfig: ControlMessage | null = null
+  private frameFormat: FrameFormat = 'binary'
   private readonly intervalMs = 80
   private readonly stepsPerTick = 2
 
@@ -56,6 +59,7 @@ export class SimSession {
   private start(msg: ControlMessage) {
     this.pause()
     this.lastConfig = msg
+    this.frameFormat = msg.frameFormat ?? 'binary'
     const type = (msg.type ?? '1D') as SimType
     this.solver = this.createSolver(type, msg)
     this.pump()
@@ -63,6 +67,7 @@ export class SimSession {
 
   private continue() {
     if (!this.solver && this.lastConfig) {
+      this.frameFormat = this.lastConfig.frameFormat ?? 'binary'
       this.solver = this.createSolver(
         (this.lastConfig.type ?? '1D') as SimType,
         this.lastConfig,
@@ -137,59 +142,117 @@ export class SimSession {
     }
   }
 
+  private emitFrame(payload: {
+    kind: '1d' | '2d'
+    step: number
+    rows: number
+    cols: number
+    min: number
+    max: number
+    values: number[]
+    jsonExtra?: Record<string, unknown>
+  }) {
+    if (this.frameFormat === 'json') {
+      if (payload.kind === '1d') {
+        this.send(
+          JSON.stringify({
+            kind: '1d',
+            dataX: Array.from({ length: payload.cols }, (_, i) => i),
+            dataY: payload.values,
+            step: payload.step,
+            col: payload.cols,
+            max: payload.max,
+            min: payload.min,
+            ...payload.jsonExtra,
+          }),
+        )
+      } else {
+        this.send(
+          JSON.stringify({
+            kind: '2d',
+            dataX: Array.from({ length: payload.cols }, (_, i) => i),
+            dataY: Array.from({ length: payload.rows }, (_, j) => j),
+            dataVal: payload.values,
+            step: payload.step,
+            row: payload.rows,
+            col: payload.cols,
+            max: payload.max,
+            min: payload.min,
+            ...payload.jsonExtra,
+          }),
+        )
+      }
+      return
+    }
+
+    const ab = encodeBinaryFrame({
+      kind: payload.kind,
+      step: payload.step,
+      rows: payload.rows,
+      cols: payload.cols,
+      min: payload.min,
+      max: payload.max,
+      values: payload.values,
+    })
+    this.send(Buffer.from(ab))
+  }
+
   private pump() {
     this.pause()
     this.interval = setInterval(() => {
       if (!this.solver) return
-      let payload: Record<string, unknown> | null = null
+      let last:
+        | {
+            kind: '1d' | '2d'
+            step: number
+            rows: number
+            cols: number
+            min: number
+            max: number
+            values: number[]
+            jsonExtra?: Record<string, unknown>
+          }
+        | null = null
       for (let i = 0; i < this.stepsPerTick; i++) {
         if (this.solver.kind === '1D') {
           const d = this.solver.sim.getNextTimeLayer()
-          payload = {
+          last = {
             kind: '1d',
-            dataX: d.dataX,
-            dataY: d.dataHy,
-            dataEx: d.dataEx,
-            dataHy: d.dataHy,
             step: d.currentTick,
-            col: d.col,
-            max: d.maxEx,
+            rows: 1,
+            cols: d.col,
             min: d.minEx,
+            max: d.maxEx,
+            values: d.dataHy,
+            jsonExtra: { dataEx: d.dataEx, dataHy: d.dataHy },
           }
         } else if (this.solver.kind === '2D') {
           const d = this.solver.sim.getNextTimeLayer()
-          payload = {
+          last = {
             kind: '2d',
-            dataX: d.dataX,
-            dataY: d.dataY,
-            dataVal: d.field,
-            hz: d.hz,
-            ex: d.ex,
-            ey: d.ey,
             step: d.timeStep,
-            row: d.rows,
-            col: d.cols,
-            max: d.max,
+            rows: d.rows,
+            cols: d.cols,
             min: d.min,
+            max: d.max,
+            values: d.field,
+            jsonExtra: { hz: d.hz, ex: d.ex, ey: d.ey },
           }
         } else {
           const d = this.solver.sim.getNextTimeLayer()
-          payload = {
+          last = {
             kind: '2d',
-            dataX: d.dataX,
-            dataY: d.dataY,
-            dataVal: d.ez,
-            hz: d.hz,
-            ez: d.ez,
             step: d.timeStep,
-            row: d.rows,
-            col: d.cols,
-            max: d.max,
+            rows: d.rows,
+            cols: d.cols,
             min: d.min,
+            max: d.max,
+            values: d.ez,
+            jsonExtra: { hz: d.hz, ez: d.ez },
           }
         }
       }
-      if (payload) this.send(JSON.stringify(payload))
+      if (last) this.emitFrame(last)
     }, this.intervalMs)
   }
 }
